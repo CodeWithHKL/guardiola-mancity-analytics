@@ -27,10 +27,10 @@ export function PlayerView({ code }: { code: number }) {
   const matches = useMemo(() => (pf ? pf.matches.filter((m) => season === "All" || m.season === season) : []), [pf, season]);
 
   const radar = useMemo(() => {
-    if (!all || !total || !pf) return [];
+    if (!all || !total || !pf || total.minutes < 900) return [];
     const by = new Map<number, PlayerSeason[]>();
     for (const r of all) if (r.pos === pf.pos && (season === "All" || r.season === season)) by.set(r.code, [...(by.get(r.code) ?? []), r]);
-    const peers = [...by.values()].map((v) => sumSeasons(v)!).filter((p) => p.minutes >= 900);
+    const peers = [...by.values()].map((v) => sumSeasons(v)!).filter((p) => p.minutes >= 900 && p.code !== pf.code);
     return RADAR.map(({ metric, f }) => {
       const v = f(total);
       const below = peers.filter((p) => f(p) < v).length;
@@ -95,8 +95,8 @@ export function PlayerView({ code }: { code: number }) {
         <StatTile label={total.pos === "GK" || total.pos === "DEF" ? "Clean sheets" : "Threat /90"} value={total.pos === "GK" || total.pos === "DEF" ? total.cleanSheets : Math.round(per90(total.threat, total.minutes))} />
       </div>
       <div className="grid gap-4 lg:grid-cols-2">
-        <Card title={`Profile vs ${pf.pos}s`} note={`Percentile of per-90 output among City ${pf.pos}s with 900+ minutes in the selected period. 100 = best.`}>
-          <Radar1 data={radar} />
+        <Card title={`Profile vs ${pf.pos}s`} note={`Share of other City ${pf.pos}s (900+ minutes in the selected period) this player out-produces per 90. 100 = best of the group.`}>
+          {radar.length ? <Radar1 data={radar} /> : <p className="py-16 text-center text-muted">Not enough minutes (under 900) for a meaningful comparison.</p>}
         </Card>
         <Card title="Goals and assists by season">
           <GroupedBars data={bySeason} x="season" digits={0} series={[{ key: "Goals", name: "Goals" }, { key: "Assists", name: "Assists" }]} />
