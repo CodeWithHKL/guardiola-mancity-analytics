@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { TROPHY_TOTAL, TrophyMarquee } from "@/components/trophies";
 
-export const metadata: Metadata = { title: "About — Guardiola's Man City" };
+export const metadata: Metadata = { title: "About" };
 
 const HERO = "/images/pep-trophies.jpg";
 

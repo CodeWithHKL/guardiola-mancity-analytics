@@ -7,7 +7,7 @@ const rajdhani = Rajdhani({ variable: "--font-rajdhani", subsets: ["latin"], wei
 const barlow = Barlow({ variable: "--font-barlow", subsets: ["latin"], weight: ["400", "500", "600", "700"] });
 
 export const metadata: Metadata = {
-  title: "Guardiola's Man City — Analytics",
+  title: { default: "Overview | Guardiola's Man City", template: "%s | Guardiola's Man City" },
   description: "Player, match and team analytics for Manchester City under Pep Guardiola (2016–2026), from Fantasy Premier League data.",
 };
 
