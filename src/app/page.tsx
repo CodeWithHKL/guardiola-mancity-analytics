@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useMemo } from "react";
-import { GroupedBars } from "@/components/charts";
+import { GroupedBars, SeasonPoints, C1, NEUTRAL } from "@/components/charts";
 import { Card, DataTable, FilterBar, Loading, ResultChip, StatTile, type Col } from "@/components/ui";
 import { filterMatches, useFilters, useMatches, useSeasons } from "@/lib/data";
 import { aggregateMatches, ord, round } from "@/lib/metrics";
@@ -36,6 +36,17 @@ export default function Overview() {
     })
     .filter((x) => x.n > 0);
 
+  const words = ["No", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten"];
+  const best = seasons.reduce((m, s) => (s.points > m.points ? s : m));
+  const ppg = (s: TeamSeason) => s.points / s.played;
+  const peak = seasons.reduce((m, s) => (ppg(s) > ppg(m) ? s : m));
+  const low = seasons.reduce((m, s) => (ppg(s) < ppg(m) ? s : m));
+  const bestAtt = seasons.reduce((m, s) => (s.goalsFor / s.played > m.goalsFor / m.played ? s : m));
+  const bestDef = seasons.reduce((m, s) => (s.goalsAgainst / s.played < m.goalsAgainst / m.played ? s : m));
+  const xm = all.filter((m) => m.xgFor !== null);
+  const sum = (f: (m: (typeof xm)[number]) => number) => xm.reduce((t, m) => t + f(m), 0);
+  const seasonPoints = seasons.map((s) => ({ season: star(s), points: s.points, finish: ord(s.position), champion: s.position === 1 }));
+
   const cols: Col<TeamSeason>[] = [
     { key: "season", header: "Season", value: (s) => s.season, align: "left", render: (s) => star(s) },
     { key: "pos", header: "Pos", value: (s) => s.position, render: (s) => ord(s.position) },
@@ -51,20 +62,23 @@ export default function Overview() {
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div>
-        <h1 className="font-display text-4xl font-bold uppercase">
-          Guardiola&apos;s <span className="text-sky">Man City</span>, 2016–2026
-        </h1>
-        <p className="text-muted">
-          Premier League analysis built from Fantasy Premier League data: {all.length} matches across {seasons.length} seasons. Pick a season or venue, then drill into a player or a match.
-        </p>
+        <h1 className="font-display text-3xl font-semibold tracking-tight">Guardiola&apos;s Man City, 2016–2026</h1>
+        <p className="text-muted">Premier League only · {all.length} matches · {seasons.length} seasons · source: Fantasy Premier League</p>
       </div>
+      <Card title={`${words[titles] ?? titles} league titles in ${done} seasons, peaking at ${best.points} points in ${best.season}`}>
+        <div className="mb-2 flex gap-5 text-sm text-muted">
+          <span className="flex items-center gap-2"><i className="inline-block h-3 w-3" style={{ background: C1 }} />Champions</span>
+          <span className="flex items-center gap-2"><i className="inline-block h-3 w-3" style={{ background: NEUTRAL }} />Other finish</span>
+        </div>
+        <SeasonPoints data={seasonPoints} selected={sel?.season === undefined ? null : star(sel)} />
+      </Card>
       <FilterBar />
       {ms.length === 0 ? (
         <Card>No matches for this filter.</Card>
       ) : (
-        <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
+        <div className="grid grid-cols-2 gap-x-6 gap-y-5 md:grid-cols-3 lg:grid-cols-6">
           <StatTile label="Record" value={`${agg.wins}-${agg.draws}-${agg.losses}`} sub={`${agg.matches} matches`} />
           <StatTile label="Points" value={agg.points} sub={`${agg.ppg} per game`} />
           <StatTile label="Goals" value={`${agg.goalsFor}:${agg.goalsAgainst}`} sub={`GD ${agg.goalsFor - agg.goalsAgainst > 0 ? "+" : ""}${agg.goalsFor - agg.goalsAgainst}`} />
@@ -77,17 +91,17 @@ export default function Overview() {
           )}
         </div>
       )}
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Card title="Points per game" note="Always shows every season.">
+      <div className="grid gap-x-8 gap-y-8 lg:grid-cols-2">
+        <Card title={`Points per game peaked at ${round(ppg(peak), 2)} in ${peak.season} and bottomed out at ${round(ppg(low), 2)} in ${low.season}`} note="Always shows every season.">
           <GroupedBars data={perGame} x="season" digits={2} series={[{ key: "Points per game", name: "Points per game" }]} />
         </Card>
-        <Card title="Goals per game" note="Scored vs conceded.">
+        <Card title={`Best attack in ${bestAtt.season} (${round(bestAtt.goalsFor / bestAtt.played, 2)} a game), best defence in ${bestDef.season} (${round(bestDef.goalsAgainst / bestDef.played, 2)})`} note="Goals scored and conceded per game.">
           <GroupedBars data={perGame} x="season" digits={2} series={[{ key: "Goals scored", name: "Scored" }, { key: "Goals conceded", name: "Conceded" }]} />
         </Card>
-        <Card title="Goals vs expected goals per game" note="Per match, over matches with xG data (count in brackets). FPL started recording xG partway through 2022/23.">
+        <Card title={`City scored ${sum((m) => m.goalsFor)} goals from ${Math.round(sum((m) => m.xgFor ?? 0))} xG over the ${xm.length} matches with data`} note="Per match, over matches with xG data (count in brackets). FPL started recording xG partway through 2022/23.">
           <GroupedBars data={xgSeasons} x="season" digits={2} series={[{ key: "Goals scored", name: "Goals" }, { key: "xG", name: "xG" }]} />
         </Card>
-        <Card title="Goals conceded vs expected goals against" note="xGA = highest xGC among City players in each match.">
+        <Card title={`City conceded ${sum((m) => m.goalsAgainst)} goals against ${Math.round(sum((m) => m.xgAgainst ?? 0))} xGA over the same matches`} note="xGA = highest xGC among City players in each match, so it is only an approximation.">
           <GroupedBars data={xgSeasons} x="season" digits={2} series={[{ key: "Goals conceded", name: "Goals conceded" }, { key: "xG against", name: "xGA" }]} />
         </Card>
       </div>

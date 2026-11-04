@@ -4,8 +4,8 @@ import { useFilters, useSeasons, type Venue } from "@/lib/data";
 
 export function Card({ title, children, note }: { title?: string; children: ReactNode; note?: string }) {
   return (
-    <section className="border border-line border-l-4 border-l-sky bg-surface p-4">
-      {title && <h2 className="mb-3 font-display text-xl font-semibold uppercase tracking-wide">{title}</h2>}
+    <section className="border-t border-line pt-4">
+      {title && <h2 className="mb-3 font-display text-xl font-semibold leading-snug">{title}</h2>}
       {children}
       {note && <p className="mt-2 text-xs text-muted">{note}</p>}
     </section>
@@ -14,9 +14,9 @@ export function Card({ title, children, note }: { title?: string; children: Reac
 
 export function StatTile({ label, value, sub }: { label: string; value: ReactNode; sub?: string }) {
   return (
-    <div className="border border-line bg-surface px-4 py-3">
+    <div className="border-t-2 border-sky/70 pt-2">
       <div className="text-xs uppercase tracking-wider text-muted">{label}</div>
-      <div className="font-display text-4xl font-bold leading-tight text-white">{value}</div>
+      <div className="font-display text-4xl font-semibold leading-tight tabular-nums text-white">{value}</div>
       {sub && <div className="text-sm text-muted">{sub}</div>}
     </div>
   );
@@ -39,7 +39,7 @@ export function FilterBar({ venue = true }: { venue?: boolean }) {
   const f = useFilters();
   const { data: seasons } = useSeasons();
   return (
-    <div className="mb-6 flex flex-wrap items-center gap-x-6 gap-y-2 border border-line bg-surface px-4 py-2">
+    <div className="sticky top-0 z-10 -mx-6 flex flex-wrap items-center gap-x-6 gap-y-2 border-b border-line bg-background/95 px-6 py-2 backdrop-blur">
       <Select label="Season" value={f.season} options={["All", ...(seasons?.map((s) => s.season) ?? [])]} onChange={f.setSeason} />
       {venue && <Select label="Venue" value={f.venue} options={["All", "Home", "Away"]} onChange={(v) => f.setVenue(v as Venue)} />}
     </div>
@@ -50,7 +50,7 @@ export function Loading({ error }: { error?: string | null }) {
   return <p className="py-12 text-center text-muted">{error ? `Error: ${error}` : "Loading…"}</p>;
 }
 
-const chip = { W: "bg-[#3d8fdc] text-white", D: "bg-[#5a6a94] text-white", L: "bg-[#d95926] text-white" } as const;
+const chip = { W: "bg-[#4499e6] text-white", D: "bg-[#6b82b8] text-white", L: "bg-[#e8672f] text-white" } as const;
 export function ResultChip({ result, className = "" }: { result: "W" | "D" | "L"; className?: string }) {
   return <span className={`inline-flex h-7 w-7 items-center justify-center text-xs font-bold ${chip[result]} ${className}`}>{result}</span>;
 }
@@ -77,7 +77,7 @@ export function DataTable<T>({ rows, cols, initialSort, rowKey, initialDir = -1,
   return (
     <div className="overflow-auto" style={maxHeight ? { maxHeight } : undefined}>
       <table className="w-full text-sm">
-        <thead className="sticky top-0 bg-surface">
+        <thead className="sticky top-0 bg-background">
           <tr className="border-b border-line text-xs uppercase tracking-wider text-muted">
             {cols.map((c) => (
               <th

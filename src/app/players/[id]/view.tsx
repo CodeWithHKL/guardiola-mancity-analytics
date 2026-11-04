@@ -43,7 +43,7 @@ export function PlayerView({ code }: { code: number }) {
     return (
       <div className="space-y-6">
         <Link href="/players" className="text-sm text-muted hover:text-sky">← All players</Link>
-        <h1 className="font-display text-5xl font-bold uppercase">{pf.name}</h1>
+        <h1 className="font-display text-4xl font-semibold tracking-tight">{pf.name}</h1>
         <FilterBar venue={false} />
         <Card>No Premier League appearances for City in this season.</Card>
       </div>
@@ -82,7 +82,7 @@ export function PlayerView({ code }: { code: number }) {
     <div className="space-y-6">
       <Link href="/players" className="text-sm text-muted hover:text-sky">← All players</Link>
       <div>
-        <h1 className="font-display text-5xl font-bold uppercase">{pf.name}</h1>
+        <h1 className="font-display text-4xl font-semibold tracking-tight">{pf.name}</h1>
         <p className="text-muted">{pf.pos} · {total.apps} apps · {total.minutes} minutes · {pf.seasons[0].season} → {pf.seasons[pf.seasons.length - 1].season} at City</p>
       </div>
       <FilterBar venue={false} />

@@ -32,7 +32,7 @@ export default function MatchesPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="font-display text-4xl font-bold uppercase">Matches</h1>
+      <h1 className="font-display text-3xl font-semibold tracking-tight">Matches</h1>
       <FilterBar />
       <Card note={`${rows.length} matches`}>
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search opponent…" className="mb-3 w-64 border border-line bg-background px-3 py-1.5" />

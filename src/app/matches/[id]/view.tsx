@@ -36,7 +36,7 @@ export function MatchView({ id }: { id: string }) {
         <div className="text-sm uppercase tracking-wider text-muted">
           Premier League · {m.season} · Gameweek {m.gw} · {m.date.slice(0, 10)}
         </div>
-        <h1 className="flex flex-wrap items-center gap-4 font-display text-5xl font-bold uppercase">
+        <h1 className="flex flex-wrap items-center gap-4 font-display text-4xl font-semibold tracking-tight">
           {m.home ? "Man City" : m.opponent} {m.home ? m.goalsFor : m.goalsAgainst}–{m.home ? m.goalsAgainst : m.goalsFor} {m.home ? m.opponent : "Man City"}
           <ResultChip result={m.result} className="!h-9 !w-9 !text-base" />
         </h1>

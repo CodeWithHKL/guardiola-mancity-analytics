@@ -98,7 +98,7 @@ export default function TeamPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="font-display text-4xl font-bold uppercase">Team analysis</h1>
+      <h1 className="font-display text-3xl font-semibold tracking-tight">Team analysis</h1>
       <FilterBar />
       <Card title="Title race: compare two seasons">
         <div className="mb-3 flex gap-6">

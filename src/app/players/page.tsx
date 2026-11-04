@@ -41,7 +41,7 @@ export default function PlayersPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="font-display text-4xl font-bold uppercase">Players</h1>
+      <h1 className="font-display text-3xl font-semibold tracking-tight">Players</h1>
       <div className="flex flex-wrap items-start gap-4">
         <div className="flex-1"><FilterBar venue={false} /></div>
       </div>

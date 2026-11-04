@@ -2,13 +2,13 @@
 
 /* Manchester City palette: sky blue + navy. Data series use deeper, validated steps (see charts.tsx). */
 :root {
-  --background: #0a1128;
-  --surface: #111b3a;
-  --line: #243461;
+  --background: #0e2450;
+  --surface: #163266;
+  --line: #2f4f8c;
   --foreground: #f2f6fc;
-  --muted: #98a8cc;
-  --sky: #6cabdd;
-  --navy: #1c2c5b;
+  --muted: #b3c8ec;
+  --sky: #8fcaf5;
+  --navy: #1d4a94;
 }
 
 @theme inline {
