@@ -1,26 +1,54 @@
 @import "tailwindcss";
 
+/* Manchester City palette: sky blue + navy. Data series use deeper, validated steps (see charts.tsx). */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #0a1128;
+  --surface: #111b3a;
+  --line: #243461;
+  --foreground: #f2f6fc;
+  --muted: #98a8cc;
+  --sky: #6cabdd;
+  --navy: #1c2c5b;
 }
 
 @theme inline {
   --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-line: var(--line);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-muted: var(--muted);
+  --color-sky: var(--sky);
+  --color-navy: var(--navy);
+  --font-display: var(--font-rajdhani);
+  --font-sans: var(--font-barlow);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* Sharp edges everywhere. */
+*,
+*::before,
+*::after {
+  border-radius: 0 !important;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-barlow), system-ui, sans-serif;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-rajdhani), system-ui, sans-serif;
+  letter-spacing: 0.01em;
+}
+
+select,
+input {
+  color-scheme: dark;
+}
+
+:focus-visible {
+  outline: 2px solid var(--sky);
+  outline-offset: 2px;
 }

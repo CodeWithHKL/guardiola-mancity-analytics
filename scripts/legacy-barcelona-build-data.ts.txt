@@ -1,0 +1,423 @@
+/**
+ * Fetches StatsBomb open data for Barcelona (Guardiola era, 2008/09–2011/12),
+ * aggregates it and writes compact JSON to public/data/.
+ *
+ * Run: npm run build-data   (raw downloads are cached in .cache/)
+ */
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+import {
+  PITCH,
+  type Heat,
+  type MatchDetail,
+  type MatchSummary,
+  type PlayerMatchRow,
+  type PlayerSeason,
+  type ShotRec,
+} from "../src/lib/types";
+import { isProgressive, round } from "../src/lib/metrics";
+
+const BASE = "https://raw.githubusercontent.com/statsbomb/open-data/master/data";
+const CACHE = join(process.cwd(), ".cache");
+const OUT = join(process.cwd(), "public", "data");
+const TEAM = "Barcelona";
+const COMPETITIONS = [11, 16]; // La Liga, Champions League
+const SEASONS = [41, 21, 22, 23]; // 2008/09 … 2011/12
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
+type Ev = any;
+
+function fixText(s: string | undefined | null): string {
+  if (!s) return "";
+  let t = s;
+  // Older StatsBomb files are UTF-8 that was decoded as latin1 ("VÃ­ctor").
+  if (/[ÃÂ]/.test(t)) {
+    try {
+      t = Buffer.from(t, "latin1").toString("utf8");
+    } catch {
+      /* keep */
+    }
+  }
+  return t.replace(/''/g, "'").replace(/�/g, "");
+}
+
+async function getJson(path: string): Promise<any> {
+  const file = join(CACHE, path.replace(/\//g, "_"));
+  if (existsSync(file)) return JSON.parse(readFileSync(file, "utf8"));
+  for (let attempt = 0; attempt < 4; attempt++) {
+    try {
+      const res = await fetch(`${BASE}/${path}`);
+      if (!res.ok) throw new Error(`${res.status} ${path}`);
+      const text = await res.text();
+      mkdirSync(CACHE, { recursive: true });
+      writeFileSync(file, text);
+      return JSON.parse(text);
+    } catch (e) {
+      if (attempt === 3) throw e;
+      await new Promise((r) => setTimeout(r, 800 * (attempt + 1)));
+    }
+  }
+}
+
+async function pool<T, R>(items: T[], size: number, fn: (x: T) => Promise<R>): Promise<R[]> {
+  const out: R[] = new Array(items.length);
+  let i = 0;
+  await Promise.all(
+    Array.from({ length: size }, async () => {
+      while (i < items.length) {
+        const idx = i++;
+        out[idx] = await fn(items[idx]);
+      }
+    }),
+  );
+  return out;
+}
+
+const toMin = (t: string | null | undefined, fallback: number) => {
+  if (!t) return fallback;
+  const [m, s] = t.split(":").map(Number);
+  return m + (s || 0) / 60;
+};
+
+const HEAT_W = 12;
+const HEAT_H = 8;
+const heatIdx = (loc: number[]) =>
+  Math.min(HEAT_H - 1, Math.floor((loc[1] / PITCH.h) * HEAT_H)) * HEAT_W +
+  Math.min(HEAT_W - 1, Math.floor((loc[0] / PITCH.w) * HEAT_W));
+const newHeat = (): Heat => ({ w: HEAT_W, h: HEAT_H, cells: new Array(HEAT_W * HEAT_H).fill(0) });
+
+function seasonLabel(id: number) {
+  return { 41: "2008/09", 21: "2009/10", 22: "2010/11", 23: "2011/12" }[id] ?? String(id);
+}
+
+interface Acc extends PlayerSeason {
+  _heat: Heat;
+}
+
+async function main() {
+  mkdirSync(join(OUT, "matches"), { recursive: true });
+  mkdirSync(join(OUT, "players"), { recursive: true });
+
+  // 1. match list
+  const raw: any[] = [];
+  for (const c of COMPETITIONS)
+    for (const s of SEASONS) {
+      try {
+        const ms = await getJson(`matches/${c}/${s}.json`);
+        raw.push(...ms.filter((m: any) => m.home_team.home_team_name === TEAM || m.away_team.away_team_name === TEAM));
+      } catch (e) {
+        console.warn(`skip comp ${c} season ${s}:`, (e as Error).message);
+      }
+    }
+  raw.sort((a, b) => a.match_date.localeCompare(b.match_date));
+  console.log(`${raw.length} Barcelona matches`);
+
+  const summaries: MatchSummary[] = [];
+  const playerNames = new Map<number, string>();
+  const playerAcc = new Map<string, Acc>(); // `${playerId}|${season}|${comp}`? -> keyed by player+season
+  const playerMatches = new Map<number, PlayerMatchRow[]>();
+  const playerShots = new Map<number, ShotRec[]>();
+  const playerKeyPasses = new Map<number, MatchDetail["keyPasses"]>();
+  const playerHeat = new Map<number, Heat>();
+
+  const acc = (id: number, season: string): Acc => {
+    const k = `${id}|${season}`;
+    let a = playerAcc.get(k);
+    if (!a) {
+      a = {
+        playerId: id,
+        name: playerNames.get(id) ?? String(id),
+        season,
+        apps: 0, starts: 0, minutes: 0, goals: 0, assists: 0, shots: 0, shotsOnTarget: 0, xg: 0, xa: 0,
+        keyPasses: 0, passes: 0, passesCompleted: 0, progressivePasses: 0,
+        dribbles: 0, dribblesCompleted: 0, pressures: 0, tackles: 0, interceptions: 0, recoveries: 0,
+        positions: {},
+        _heat: newHeat(),
+      };
+      playerAcc.set(k, a);
+    }
+    return a;
+  };
+
+  // 2. per match
+  let done = 0;
+  await pool(raw, 6, async (m) => {
+    const id: number = m.match_id;
+    const [events, lineups]: [Ev[], any[]] = await Promise.all([
+      getJson(`events/${id}.json`),
+      getJson(`lineups/${id}.json`),
+    ]);
+    done++;
+    if (done % 20 === 0) console.log(`  downloaded ${done}/${raw.length}`);
+    return { id, events, lineups };
+  }).then((rows) => {
+    for (const { id, events, lineups } of rows) {
+      const m = raw.find((x) => x.match_id === id);
+      const home = m.home_team.home_team_name === TEAM;
+      const opp = home ? m.away_team.away_team_name : m.home_team.home_team_name;
+      const season = seasonLabel(m.season.season_id);
+      const goalsFor = home ? m.home_score : m.away_score;
+      const goalsAgainst = home ? m.away_score : m.home_score;
+      const matchEnd = Math.max(90, ...events.map((e: Ev) => (e.period <= 2 ? e.minute + 1 : 0)));
+
+      // names + minutes from lineups
+      const lineup = lineups.find((l) => l.team_name === TEAM);
+      const minutesBy = new Map<number, number>();
+      const startedBy = new Set<number>();
+      const shirt = new Map<number, number>();
+      for (const p of lineup?.lineup ?? []) {
+        playerNames.set(p.player_id, fixText(p.player_nickname || p.player_name));
+        shirt.set(p.player_id, p.jersey_number);
+        let mins = 0;
+        const ps = p.positions ?? [];
+        for (const pos of ps) {
+          if (pos.start_reason === "Starting XI") startedBy.add(p.player_id);
+          const from = toMin(pos.from, 0);
+          const to = toMin(pos.to, matchEnd);
+          mins += Math.max(0, to - from);
+        }
+        // positions list contains tactical shifts of the same stint; merging is fine
+        if (ps.length) minutesBy.set(p.player_id, mins);
+      }
+
+      const mine = events.filter((e: Ev) => e.team?.name === TEAM);
+      const theirs = events.filter((e: Ev) => e.team?.name !== TEAM && e.team);
+
+      // team metrics
+      const passesF = mine.filter((e: Ev) => e.type.name === "Pass");
+      const passesA = theirs.filter((e: Ev) => e.type.name === "Pass");
+      const defActs = mine.filter(
+        (e: Ev) =>
+          e.location &&
+          e.location[0] >= PITCH.w * 0.4 &&
+          (e.type.name === "Interception" ||
+            e.type.name === "Foul Committed" ||
+            (e.type.name === "Duel" && e.duel?.type?.name === "Tackle")),
+      ).length;
+      const oppPassesHigh = passesA.filter((e: Ev) => e.location && e.location[0] <= PITCH.w * 0.6).length;
+      const ppda = defActs ? oppPassesHigh / defActs : null;
+      const possession = passesF.length / Math.max(1, passesF.length + passesA.length);
+
+      const shotsRec = (evs: Ev[], own: boolean): ShotRec[] =>
+        evs
+          .filter((e) => e.type.name === "Shot" && e.location)
+          .map((e) => ({
+            minute: e.minute + (e.second ?? 0) / 60,
+            x: e.location[0],
+            y: e.location[1],
+            xg: round(e.shot.statsbomb_xg ?? 0, 3),
+            outcome: e.shot.outcome.name,
+            playerId: e.player?.id,
+            player: fixText(e.player?.name),
+            bodyPart: e.shot.body_part?.name,
+            own,
+            matchId: id,
+          }));
+      const shotsFor = shotsRec(mine, true);
+      const shotsAgainst = shotsRec(theirs, false);
+      const xgFor = shotsFor.reduce((s, x) => s + x.xg, 0);
+      const xgAgainst = shotsAgainst.reduce((s, x) => s + x.xg, 0);
+
+      // shot assist lookup
+      const byId = new Map<string, Ev>(events.map((e: Ev) => [e.id, e]));
+
+      // pass network
+      const edge = new Map<string, number>();
+      const pos = new Map<number, { x: number; y: number; n: number }>();
+      for (const e of passesF) {
+        if (!e.location) continue;
+        const pid: number = e.player.id;
+        const p = pos.get(pid) ?? { x: 0, y: 0, n: 0 };
+        p.x += e.location[0]; p.y += e.location[1]; p.n++;
+        pos.set(pid, p);
+        const r = e.pass?.recipient?.id;
+        if (r && !e.pass.outcome) {
+          const k = `${pid}>${r}`;
+          edge.set(k, (edge.get(k) ?? 0) + 1);
+        }
+      }
+
+      // player accumulation
+      const matchRows = new Map<number, PlayerMatchRow>();
+      const row = (pid: number): PlayerMatchRow => {
+        let r = matchRows.get(pid);
+        if (!r) {
+          r = {
+            matchId: id, date: m.match_date, opponent: opp, season,
+            minutes: round(minutesBy.get(pid) ?? 0, 0), goals: 0, assists: 0, shots: 0, xg: 0, xa: 0,
+            passes: 0, passesCompleted: 0, progressivePasses: 0, keyPasses: 0,
+            dribbles: 0, dribblesCompleted: 0, pressures: 0, tackles: 0, interceptions: 0, recoveries: 0,
+          };
+          matchRows.set(pid, r);
+        }
+        return r;
+      };
+
+      for (const [pid, mins] of minutesBy) {
+        if (mins <= 0) continue;
+        const a = acc(pid, season);
+        a.apps++;
+        if (startedBy.has(pid)) a.starts++;
+        a.minutes += mins;
+        row(pid);
+      }
+
+      for (const e of mine) {
+        const pid: number | undefined = e.player?.id;
+        if (!pid || !minutesBy.has(pid)) continue;
+        const a = acc(pid, season);
+        const r = row(pid);
+        const t = e.type.name;
+        if (e.position?.name) a.positions[e.position.name] = (a.positions[e.position.name] ?? 0) + 1;
+        // activity heatmap: every located event except receipts/carries (which double count)
+        if (e.location && t !== "Ball Receipt*" && t !== "Carry") a._heat.cells[heatIdx(e.location)]++;
+        if (t === "Pass") {
+          a.passes++; r.passes++;
+          const complete = !e.pass.outcome;
+          if (complete) { a.passesCompleted++; r.passesCompleted++; }
+          if (complete && e.location && e.pass.end_location && isProgressive(e.location, e.pass.end_location)) {
+            a.progressivePasses++; r.progressivePasses++;
+          }
+          if (e.pass.shot_assist || e.pass.goal_assist) {
+            a.keyPasses++; r.keyPasses++;
+            const shot = e.pass.assisted_shot_id ? byId.get(e.pass.assisted_shot_id) : undefined;
+            const xa = shot?.shot?.statsbomb_xg ?? 0;
+            a.xa += xa; r.xa += xa;
+            if (e.pass.goal_assist) { a.assists++; r.assists++; }
+            if (e.location && e.pass.end_location) {
+              const arr = playerKeyPasses.get(pid) ?? [];
+              arr.push({
+                matchId: id, x: e.location[0], y: e.location[1],
+                ex: e.pass.end_location[0], ey: e.pass.end_location[1],
+                goal: !!e.pass.goal_assist, xa: round(xa, 3),
+              });
+              playerKeyPasses.set(pid, arr);
+            }
+          }
+        } else if (t === "Shot") {
+          a.shots++; r.shots++;
+          const xg = e.shot.statsbomb_xg ?? 0;
+          a.xg += xg; r.xg += xg;
+          if (["Goal", "Saved", "Saved To Post"].includes(e.shot.outcome.name)) a.shotsOnTarget++;
+          if (e.shot.outcome.name === "Goal") { a.goals++; r.goals++; }
+        } else if (t === "Dribble") {
+          a.dribbles++; r.dribbles++;
+          if (e.dribble.outcome.name === "Complete") { a.dribblesCompleted++; r.dribblesCompleted++; }
+        } else if (t === "Pressure") { a.pressures++; r.pressures++; }
+        else if (t === "Interception") { a.interceptions++; r.interceptions++; }
+        else if (t === "Ball Recovery") { a.recoveries++; r.recoveries++; }
+        else if (t === "Duel" && e.duel?.type?.name === "Tackle") { a.tackles++; r.tackles++; }
+      }
+
+      for (const s of shotsFor) {
+        if (!s.playerId) continue;
+        const arr = playerShots.get(s.playerId) ?? [];
+        arr.push(s);
+        playerShots.set(s.playerId, arr);
+      }
+      for (const [pid, r] of matchRows) {
+        r.xg = round(r.xg, 2); r.xa = round(r.xa, 2);
+        const arr = playerMatches.get(pid) ?? [];
+        arr.push(r);
+        playerMatches.set(pid, arr);
+      }
+
+      // formation + lineup
+      const xi = events.find((e: Ev) => e.type.name === "Starting XI" && e.team.name === TEAM);
+      const formation: number | undefined = xi?.tactics?.formation;
+      const xiPlayers = (xi?.tactics?.lineup ?? []).map((l: any) => ({
+        playerId: l.player.id as number,
+        name: playerNames.get(l.player.id) ?? fixText(l.player.name),
+        position: l.position.name as string,
+        shirt: l.jersey_number as number,
+      }));
+
+      const summary: MatchSummary = {
+        matchId: id,
+        date: m.match_date,
+        season,
+        competition: m.competition.competition_name,
+        stage: m.competition_stage?.name ?? "",
+        opponent: fixText(opp),
+        home,
+        goalsFor,
+        goalsAgainst,
+        result: goalsFor > goalsAgainst ? "W" : goalsFor < goalsAgainst ? "L" : "D",
+        xgFor: round(xgFor, 2),
+        xgAgainst: round(xgAgainst, 2),
+        shotsFor: shotsFor.length,
+        shotsAgainst: shotsAgainst.length,
+        possession: round(possession * 100, 1),
+        passes: passesF.length,
+        passAccuracy: round((passesF.filter((e: Ev) => !e.pass.outcome).length / Math.max(1, passesF.length)) * 100, 1),
+        ppda: ppda === null ? null : round(ppda, 2),
+        formation,
+      };
+      summaries.push(summary);
+
+      const detail: MatchDetail = {
+        summary,
+        shotsFor,
+        shotsAgainst,
+        xi: xiPlayers,
+        substitutes: (lineup?.lineup ?? [])
+          .filter((p: any) => !startedBy.has(p.player_id) && (minutesBy.get(p.player_id) ?? 0) > 0)
+          .map((p: any) => ({ playerId: p.player_id, name: playerNames.get(p.player_id) ?? "", minutes: round(minutesBy.get(p.player_id) ?? 0, 0), shirt: p.jersey_number })),
+        network: {
+          nodes: [...pos].map(([pid, p]) => ({
+            playerId: pid, name: playerNames.get(pid) ?? String(pid),
+            x: round(p.x / p.n, 1), y: round(p.y / p.n, 1), passes: p.n,
+          })),
+          edges: [...edge].map(([k, n]) => {
+            const [from, to] = k.split(">").map(Number);
+            return { from, to, n };
+          }),
+        },
+        keyPasses: [],
+      };
+      writeFileSync(join(OUT, "matches", `${id}.json`), JSON.stringify(detail));
+    }
+  });
+
+  summaries.sort((a, b) => a.date.localeCompare(b.date));
+  writeFileSync(join(OUT, "matches.json"), JSON.stringify(summaries));
+
+  // 3. players
+  const seasons: PlayerSeason[] = [];
+  for (const a of playerAcc.values()) {
+    const { _heat, ...rest } = a;
+    const name = playerNames.get(a.playerId) ?? a.name;
+    seasons.push({
+      ...rest,
+      name,
+      minutes: round(a.minutes, 0),
+      xg: round(a.xg, 2),
+      xa: round(a.xa, 2),
+    });
+    const ph = playerHeat.get(a.playerId) ?? newHeat();
+    _heat.cells.forEach((v, i) => (ph.cells[i] += v));
+    playerHeat.set(a.playerId, ph);
+  }
+  writeFileSync(join(OUT, "players.json"), JSON.stringify(seasons));
+
+  const ids = new Set(seasons.map((s) => s.playerId));
+  for (const pid of ids) {
+    const file = {
+      playerId: pid,
+      name: playerNames.get(pid) ?? String(pid),
+      seasons: seasons.filter((s) => s.playerId === pid),
+      matches: (playerMatches.get(pid) ?? []).sort((a, b) => a.date.localeCompare(b.date)),
+      shots: playerShots.get(pid) ?? [],
+      keyPasses: playerKeyPasses.get(pid) ?? [],
+      heat: playerHeat.get(pid) ?? newHeat(),
+    };
+    writeFileSync(join(OUT, "players", `${pid}.json`), JSON.stringify(file));
+  }
+
+  console.log(`wrote ${summaries.length} matches, ${ids.size} players`);
+}
+
+main().catch((e) => {
+  console.error(e);
+  process.exit(1);
+});
