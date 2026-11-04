@@ -13,6 +13,12 @@ import type {
 } from "../src/lib/types";
 
 const BASE = "https://raw.githubusercontent.com/vaastav/Fantasy-Premier-League/master/data";
+/**
+ * FPL numbered the 2019/20 restart after lockdown as rounds 39-47 (30-38 were used up by the postponed schedule).
+ * The Premier League's real matchweeks were 30-38, so shift them back.
+ */
+const matchweek = (season: string, round: number) => (season === "2019-20" && round > 38 ? round - 9 : round);
+
 const SEASONS = ["2016-17", "2017-18", "2018-19", "2019-20", "2020-21", "2021-22", "2022-23", "2023-24", "2024-25", "2025-26"];
 const CACHE = join(process.cwd(), ".cache", "fpl");
 const OUT = join(process.cwd(), "public", "data");
@@ -164,7 +170,7 @@ async function main() {
       const el = raw.get(r.element);
       if (!el) continue;
       let f = fx.get(r.fixture);
-      if (!f) fx.set(r.fixture, (f = { round: num(r, "round"), kickoff: r.kickoff_time, h: new Map(), a: new Map(), hs, as }));
+      if (!f) fx.set(r.fixture, (f = { round: matchweek(s, num(r, "round")), kickoff: r.kickoff_time, h: new Map(), a: new Map(), hs, as }));
       const m = isTrue(r.was_home) ? f.h : f.a;
       m.set(el.team, (m.get(el.team) ?? 0) + 1);
     }
