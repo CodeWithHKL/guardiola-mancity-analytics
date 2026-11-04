@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { TROPHY_TOTAL, TrophyMarquee } from "@/components/trophies";
 
 export const metadata: Metadata = { title: "About — Guardiola's Man City" };
 
@@ -58,6 +59,7 @@ export default function About() {
         <img src={HERO} alt="Pep Guardiola with his Manchester City trophies" className="absolute inset-0 h-full w-full object-cover object-[50%_95%]" />
         <div className="absolute inset-0 bg-gradient-to-t from-background via-background/20 via-45% to-transparent" />
         <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-background to-transparent" />
+        <p className="absolute right-4 top-3 text-xs text-white/70 drop-shadow-[0_1px_4px_rgba(0,0,0,0.8)]">Photo: Manchester City FC</p>
         <div className="relative mx-auto flex h-full max-w-7xl items-end px-6 pb-8 md:pb-10">
           <p className="max-w-4xl font-display text-3xl font-semibold leading-tight tracking-tight drop-shadow-[0_2px_12px_rgba(0,0,0,0.6)] lg:text-4xl">
             Pep Guardiola is a legendary coach who revolutionized football and turned Manchester City into a dynasty.
@@ -77,8 +79,18 @@ export default function About() {
         <p className="border-t border-line pt-6 font-display text-2xl font-semibold text-sky">
           Thank you, Pep Guardiola. You will always be a legend.
         </p>
-        <p className="text-xs text-muted">Hero image: Manchester City FC. This is an unofficial fan project.</p>
       </article>
+
+      <section className="space-y-6">
+        <div className="text-center">
+          <h2 className="font-display text-3xl font-semibold tracking-tight">{TROPHY_TOTAL} trophies in ten seasons</h2>
+          <p className="text-sm text-muted">Everything Guardiola won at Manchester City, 2016/17 to 2025/26</p>
+        </div>
+        <TrophyMarquee />
+        <p className="mx-auto max-w-3xl text-center text-xs text-muted">
+          Trophy photos: Manchester City FC. League Cup trophy by MacMoreno and Community Shield by Riccardo de Conciliis, both from Wikimedia Commons (CC BY-SA).
+        </p>
+      </section>
     </div>
   );
 }

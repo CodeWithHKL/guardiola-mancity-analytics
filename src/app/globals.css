@@ -53,3 +53,16 @@ input {
   outline: 2px solid var(--sky);
   outline-offset: 2px;
 }
+
+/* Trophy marquee on the About page: two identical halves, so -50% loops seamlessly. */
+.marquee-inner {
+  animation: marqueeScroll 40s linear infinite;
+  will-change: transform;
+}
+.trophy-marquee:hover .marquee-inner {
+  animation-play-state: paused;
+}
+@keyframes marqueeScroll {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}

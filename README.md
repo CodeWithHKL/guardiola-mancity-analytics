@@ -8,8 +8,9 @@ Built with Next.js and TypeScript. It's a static site: all data is pre-generated
 
 - **Overview**: record, points, goals, clean sheets and xG tiles, per-game charts, a season-by-season table with league finish, and a results strip linking to each match.
 - **Team**: title race for any two seasons (cumulative points and league position by gameweek), home vs away, attacking output, top scorers and assists, and City's record against every opponent.
-- **Players**: a sortable, searchable table (filter by season and position). Each player page has stat tiles, a percentile radar against other players in the same position, goals and assists by season, FPL points by appearance, a season table and a match log.
+- **Players**: a sortable, searchable table (filter by season and position). Each player page has stat tiles, a radar showing how the player ranks against other City players in the same position (players with 900+ minutes only), goals and assists by season, FPL points by appearance, a season table and a match log.
 - **Matches**: a searchable list. Each match page has the score, scorers, assists, xG, and every City player's minutes, goals, assists and FPL points.
+- **About**: the story behind the project, and a scrolling strip of the 20 trophies Guardiola won at City.
 
 ## Data
 
@@ -22,6 +23,7 @@ Things worth knowing before you read the numbers:
 - **xG and xA are patchy.** FPL started recording them partway through 2022/23. Matches without data show as missing (`–`), not zero, and xG totals only cover matches that have it.
 - **Assists** follow FPL's rules and can differ slightly from official records.
 - **League tables** are computed from all 380 fixtures per season, so league positions are real. The results match known totals, for example 100 points in 2017/18 and 98 in 2018/19.
+- **Matchweeks.** FPL numbered the 2019/20 restart after lockdown as rounds 39–47. The build shifts these back to the real matchweeks 30–38.
 - **Tenure.** The dataset ends with 2025/26, Guardiola's last season at City.
 
 ## Getting started
@@ -68,8 +70,9 @@ Don't edit these by hand, since the next build overwrites them.
 
 ```
 scripts/build-city-data.ts   data pipeline (FPL -> JSON)
-src/app/                     pages: overview, team, players, matches
-src/components/              shared UI and Recharts chart wrappers
+src/app/                     pages: overview, team, players, matches, about
+src/components/              shared UI, Recharts chart wrappers, trophy marquee
+public/images/               hero photo and trophy images (About page)
 src/lib/data.ts              data loading hooks and the season/venue filter store
 src/lib/metrics.ts           per-90, aggregation and merge helpers (tested)
 src/lib/types.ts             data types
@@ -86,4 +89,4 @@ The theme uses Manchester City's sky blue and navy with sharp, non-rounded corne
 
 ## Credits
 
-Data from the Fantasy Premier League API and the [vaastav/Fantasy-Premier-League](https://github.com/vaastav/Fantasy-Premier-League) archive. This is an unofficial fan project and is not affiliated with Manchester City, the Premier League or Fantasy Premier League.
+Data from the Fantasy Premier League API and the [vaastav/Fantasy-Premier-League](https://github.com/vaastav/Fantasy-Premier-League) archive. The About page hero and the Premier League, Champions League, FA Cup, Super Cup and Club World Cup trophy images come from a Manchester City FC photo. The League Cup trophy (MacMoreno) and Community Shield (Riccardo de Conciliis) images are from [Wikimedia Commons](https://commons.wikimedia.org/) under CC BY-SA. This is an unofficial fan project and is not affiliated with Manchester City, the Premier League or Fantasy Premier League.
