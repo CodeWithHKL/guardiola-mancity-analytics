@@ -27,14 +27,6 @@ export default function Overview() {
     "Goals scored": round(s.goalsFor / s.played, 2),
     "Goals conceded": round(s.goalsAgainst / s.played, 2),
   }));
-  // goals vs xG only over the matches that have xG, so both bars cover the same games
-  const xgSeasons = seasons
-    .map((s) => {
-      const xm = all.filter((m) => m.season === s.season && m.xgFor !== null);
-      const avg = (f: (m: (typeof xm)[number]) => number) => round(xm.reduce((t, m) => t + f(m), 0) / Math.max(1, xm.length), 2);
-      return { season: `${star(s)} (${xm.length})`, n: xm.length, "Goals scored": avg((m) => m.goalsFor), "xG": avg((m) => m.xgFor ?? 0), "Goals conceded": avg((m) => m.goalsAgainst), "xG against": avg((m) => m.xgAgainst ?? 0) };
-    })
-    .filter((x) => x.n > 0);
 
   const words = ["No", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten"];
   const best = seasons.reduce((m, s) => (s.points > m.points ? s : m));
@@ -43,8 +35,17 @@ export default function Overview() {
   const low = seasons.reduce((m, s) => (ppg(s) < ppg(m) ? s : m));
   const bestAtt = seasons.reduce((m, s) => (s.goalsFor / s.played > m.goalsFor / m.played ? s : m));
   const bestDef = seasons.reduce((m, s) => (s.goalsAgainst / s.played < m.goalsAgainst / m.played ? s : m));
-  const xm = all.filter((m) => m.xgFor !== null);
-  const sum = (f: (m: (typeof xm)[number]) => number) => xm.reduce((t, m) => t + f(m), 0);
+  const venuePpg = seasons.map((s) => {
+    const ofSeason = all.filter((m) => m.season === s.season);
+    const ppgAt = (home: boolean) => {
+      const v = ofSeason.filter((m) => m.home === home);
+      return round(v.reduce((t, m) => t + m.points, 0) / Math.max(1, v.length), 2);
+    };
+    return { season: star(s), Home: ppgAt(true), Away: ppgAt(false) };
+  });
+  const gap = venuePpg.reduce((m, v) => (v.Home - v.Away > m.Home - m.Away ? v : m));
+  const csBest = seasons.reduce((m, s) => (s.cleanSheets > m.cleanSheets ? s : m));
+  const csData = seasons.map((s) => ({ season: star(s), "Clean sheets": s.cleanSheets }));
   const seasonPoints = seasons.map((s) => ({ season: star(s), points: s.points, finish: ord(s.position), champion: s.position === 1 }));
 
   const cols: Col<TeamSeason>[] = [
@@ -98,11 +99,11 @@ export default function Overview() {
         <Card title={`Best attack in ${bestAtt.season} (${round(bestAtt.goalsFor / bestAtt.played, 2)} a game), best defence in ${bestDef.season} (${round(bestDef.goalsAgainst / bestDef.played, 2)})`} note="Goals scored and conceded per game.">
           <GroupedBars data={perGame} x="season" digits={2} series={[{ key: "Goals scored", name: "Scored" }, { key: "Goals conceded", name: "Conceded" }]} />
         </Card>
-        <Card title={`City scored ${sum((m) => m.goalsFor)} goals from ${Math.round(sum((m) => m.xgFor ?? 0))} xG over the ${xm.length} matches with data`} note="Per match, over matches with xG data (count in brackets). FPL started recording xG partway through 2022/23.">
-          <GroupedBars data={xgSeasons} x="season" digits={2} series={[{ key: "Goals scored", name: "Goals" }, { key: "xG", name: "xG" }]} />
+        <Card title={`Biggest home edge in ${gap.season}: ${gap.Home.toFixed(2)} points a game at home, ${gap.Away.toFixed(2)} away`} note="Points per game by venue.">
+          <GroupedBars data={venuePpg} x="season" digits={2} series={[{ key: "Home", name: "Home" }, { key: "Away", name: "Away" }]} />
         </Card>
-        <Card title={`City conceded ${sum((m) => m.goalsAgainst)} goals against ${Math.round(sum((m) => m.xgAgainst ?? 0))} xGA over the same matches`} note="xGA = highest xGC among City players in each match, so it is only an approximation.">
-          <GroupedBars data={xgSeasons} x="season" digits={2} series={[{ key: "Goals conceded", name: "Goals conceded" }, { key: "xG against", name: "xGA" }]} />
+        <Card title={`Most clean sheets: ${csBest.cleanSheets} in ${csBest.season}`} note="Premier League matches without conceding, per season.">
+          <GroupedBars data={csData} x="season" digits={0} series={[{ key: "Clean sheets", name: "Clean sheets" }]} />
         </Card>
       </div>
       <Card title="Season by season">
