@@ -47,13 +47,15 @@ export default function TeamPage() {
   const gws = Array.from({ length: 38 }, (_, i) => i + 1);
   const race = gws.map((gw) => ({
     gw,
-    [a]: sa?.progress.find((p) => p.gw === gw)?.points ?? null,
-    [b]: sb?.progress.find((p) => p.gw === gw)?.points ?? null,
+    A: sa?.progress.find((p) => p.gw === gw)?.points ?? null,
+    B: sb?.progress.find((p) => p.gw === gw)?.points ?? null,
   }));
+  // fixed keys (not the season names) so comparing a season with itself can't produce duplicate keys
+  const raceSeries = a === b ? [{ key: "A", name: a }] : [{ key: "A", name: a }, { key: "B", name: b }];
   const pos = gws.map((gw) => ({
     gw,
-    [a]: sa?.progress.find((p) => p.gw === gw)?.position ?? null,
-    [b]: sb?.progress.find((p) => p.gw === gw)?.position ?? null,
+    A: sa?.progress.find((p) => p.gw === gw)?.position ?? null,
+    B: sb?.progress.find((p) => p.gw === gw)?.position ?? null,
   }));
 
   const split = (home: boolean) => aggregateMatches(ms.filter((m) => m.home === home));
@@ -106,11 +108,11 @@ export default function TeamPage() {
         <div className="grid gap-4 lg:grid-cols-2">
           <div>
             <h3 className="mb-1 text-sm uppercase tracking-wider text-muted">Cumulative points by gameweek</h3>
-            <Trend data={race} x="gw" series={[{ key: a, name: a }, { key: b, name: b }]} digits={0} />
+            <Trend data={race} x="gw" series={raceSeries} digits={0} />
           </div>
           <div>
             <h3 className="mb-1 text-sm uppercase tracking-wider text-muted">League position after each gameweek</h3>
-            <Trend data={pos} x="gw" series={[{ key: a, name: a }, { key: b, name: b }]} digits={0} reversed domain={[0.5, 10]} ticks={[1, 2, 4, 6, 8, 10]} />
+            <Trend data={pos} x="gw" series={raceSeries} digits={0} reversed domain={[0.5, 10]} ticks={[1, 2, 4, 6, 8, 10]} />
           </div>
         </div>
       </Card>
