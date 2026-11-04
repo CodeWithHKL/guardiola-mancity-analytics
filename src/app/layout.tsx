@@ -16,6 +16,7 @@ const nav = [
   { href: "/team", label: "Team" },
   { href: "/players", label: "Players" },
   { href: "/matches", label: "Matches" },
+  { href: "/about", label: "About" },
 ];
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -25,7 +26,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <header className="border-b border-line bg-background">
           <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-8 gap-y-1 px-6 py-3">
             <Link href="/" className="font-display text-2xl font-semibold tracking-tight text-white">
-              Guardiola <span className="text-muted">/ Man City</span>
+              Guardiola <span className="text-muted">X Man City</span>
             </Link>
             <nav className="flex gap-6 font-display text-lg font-medium">
               {nav.map((n) => (
