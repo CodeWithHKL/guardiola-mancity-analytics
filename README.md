@@ -1,36 +1,89 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Guardiola's Man City: Analytics
 
-## Getting Started
+An interactive dashboard for Manchester City under Pep Guardiola, covering every Premier League match from the 2016/17 season to 2025/26 (380 matches, 10 seasons). Filter by season and venue, then drill into the team, a player, or a single match.
 
-First, run the development server:
+Built with Next.js and TypeScript. It's a static site: all data is pre-generated into JSON files, so there's no server or database to run.
+
+## Features
+
+- **Overview**: record, points, goals, clean sheets and xG tiles, per-game charts, a season-by-season table with league finish, and a results strip linking to each match.
+- **Team**: title race for any two seasons (cumulative points and league position by gameweek), home vs away, attacking output, top scorers and assists, and City's record against every opponent.
+- **Players**: a sortable, searchable table (filter by season and position). Each player page has stat tiles, a percentile radar against other players in the same position, goals and assists by season, FPL points by appearance, a season table and a match log.
+- **Matches**: a searchable list. Each match page has the score, scorers, assists, xG, and every City player's minutes, goals, assists and FPL points.
+
+## Data
+
+The data comes from the **Fantasy Premier League (FPL)** API. The official API only serves per-match history for the current season, so finished seasons come from the community archive [vaastav/Fantasy-Premier-League](https://github.com/vaastav/Fantasy-Premier-League), which stores the API's weekly data.
+
+Things worth knowing before you read the numbers:
+
+- **Premier League only.** There are no Champions League, FA Cup or League Cup matches, so season totals are lower than all-competition totals.
+- **FPL-style stats, not event data.** There are no shot maps, pass maps, heatmaps or pressing numbers. Threat, Creativity and Influence are FPL's own composite scores, not counts.
+- **xG and xA are patchy.** FPL started recording them partway through 2022/23. Matches without data show as missing (`–`), not zero, and xG totals only cover matches that have it.
+- **Assists** follow FPL's rules and can differ slightly from official records.
+- **League tables** are computed from all 380 fixtures per season, so league positions are real. The results match known totals, for example 100 points in 2017/18 and 98 in 2018/19.
+- **Tenure.** The dataset ends with 2025/26, Guardiola's last season at City.
+
+## Getting started
+
+Requires Node.js 20 or later.
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+npm run dev          # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+The generated data is committed in `public/data/`, so the app runs straight after install.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Scripts
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Command | What it does |
+| --- | --- |
+| `npm run dev` | Start the development server |
+| `npm run build` | Build the static site into `out/` |
+| `npm run build-data` | Re-download the FPL data and regenerate `public/data/` |
+| `npm run lint` | Run ESLint |
+| `npm test` | Run the unit tests (Vitest) |
 
-## Learn More
+### Regenerating the data
 
-To learn more about Next.js, take a look at the following resources:
+`npm run build-data` runs `scripts/build-city-data.ts`. It downloads the archive files, works out City's fixtures, the league tables and every player's per-match stats, and rewrites `public/data/`. Raw downloads are cached in `.cache/fpl/` (git-ignored), so reruns are fast. Delete that folder to force a fresh download.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+To pull an in-progress season straight from the live FPL API, set `LIVE_SEASON` in the script (for example `"2026-27"`) and add that season to `SEASONS`. Pass `--archive-only` to skip the live fetch.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### Output files
 
-## Deploy on Vercel
+```
+public/data/
+  matches.json          all City matches, one summary each
+  seasons.json          season totals, league tables, gameweek progress
+  players.json          one row per player per season
+  matches/<id>.json     lineup and player stats for one match
+  players/<code>.json   one player's seasons and match log
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Don't edit these by hand, since the next build overwrites them.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Project structure
+
+```
+scripts/build-city-data.ts   data pipeline (FPL -> JSON)
+src/app/                     pages: overview, team, players, matches
+src/components/              shared UI and Recharts chart wrappers
+src/lib/data.ts              data loading hooks and the season/venue filter store
+src/lib/metrics.ts           per-90, aggregation and merge helpers (tested)
+src/lib/types.ts             data types
+```
+
+## Tech stack
+
+- Next.js (App Router, static export), React, TypeScript
+- Tailwind CSS, with Rajdhani (headings) and Barlow (body) fonts
+- Recharts for charts, Zustand for the filters
+- Vitest for tests
+
+The theme uses Manchester City's sky blue and navy with sharp, non-rounded corners. Chart colours are a deeper blue and an orange, checked for contrast and colour-blind separation on the dark background.
+
+## Credits
+
+Data from the Fantasy Premier League API and the [vaastav/Fantasy-Premier-League](https://github.com/vaastav/Fantasy-Premier-League) archive. This is an unofficial fan project and is not affiliated with Manchester City, the Premier League or Fantasy Premier League.
