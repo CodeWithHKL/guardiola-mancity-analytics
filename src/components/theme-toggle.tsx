@@ -18,9 +18,17 @@ function subscribe(cb: () => void) {
 }
 
 function setTheme(t: Theme) {
-  document.documentElement.dataset.theme = t;
-  try { localStorage.setItem("theme", t); } catch {}
-  listeners.forEach((l) => l());
+  const apply = () => {
+    document.documentElement.dataset.theme = t;
+    try { localStorage.setItem("theme", t); } catch {}
+    listeners.forEach((l) => l());
+  };
+  // Top-to-bottom wipe via the View Transitions API (styles in globals.css); falls back to an instant swap where unsupported (reduced-motion is deliberately not checked).
+  if (document.startViewTransition) {
+    document.startViewTransition(apply);
+  } else {
+    apply();
+  }
 }
 
 /** Three-way theme switch in the navbar; the choice is saved in localStorage. */

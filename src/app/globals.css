@@ -73,6 +73,20 @@ body {
   font-family: var(--font-barlow), system-ui, sans-serif;
 }
 
+/* Theme change: the new theme wipes in from top to bottom over the old one. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+::view-transition-new(root) {
+  animation: themeWipe 0.7s ease-in-out;
+}
+@keyframes themeWipe {
+  from { clip-path: inset(0 0 100% 0); }
+  to { clip-path: inset(0 0 0 0); }
+}
+
 h1,
 h2,
 h3 {
