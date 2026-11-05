@@ -35,6 +35,14 @@ const sections: { title: string; body: string[] }[] = [
     ],
   },
   {
+    title: "The one that got away, until it didn’t",
+    body: [
+      "Every City fan knew what was missing. We had the league titles, the domestic cups and the records, but Europe always found a way to break our hearts. The 2021 final against Chelsea hurt, and for years the Champions League felt like the one thing even Pep couldn’t solve.",
+      "Then came 2022/23. The 4-0 demolition of Real Madrid at the Etihad in the semi-final was the best 90 minutes I have ever seen from a City team. Then came Istanbul. Rodri’s goal against Inter, a 1-0 win that felt like it took forever to finish, and when the final whistle blew, years of pain turned into pure relief. I got to be honest that I expect the match to be a walk in a park, but turns out to be much more a roller coaster ride that I didn't prepared for.",
+      "City had won the Treble, the first English club to do it since Manchester United in 1999. The man who had built the greatest teams in Barcelona and won everything in England had finally completed City’s story. For the first time, City were champions of Europe, and I got to see it live, not in a highlights package years later.",
+    ],
+  },
+  {
     title: "When the rumours started",
     body: [
       "In early 2026, whispers began that Pep might leave. Even top journalists like Fabrizio Romano reported it, and I refused to believe it. It felt unreal that someone who had been so close to my life, yet whom I had never met, could be leaving my childhood club. I couldn’t picture City without him on the touchline, without those press conferences and sharp one-liners.",
