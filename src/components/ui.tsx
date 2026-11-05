@@ -39,7 +39,7 @@ export function FilterBar({ venue = true }: { venue?: boolean }) {
   const f = useFilters();
   const { data: seasons } = useSeasons();
   return (
-    <div className="sticky top-0 z-10 -mx-6 flex flex-wrap items-center gap-x-6 gap-y-2 border-b border-line bg-background/95 px-6 py-2 backdrop-blur">
+    <div className="sticky top-[var(--nav-offset,0px)] z-10 -mx-6 transition-[top] duration-300 flex flex-wrap items-center gap-x-6 gap-y-2 border-b border-line bg-background/95 px-6 py-2 backdrop-blur">
       <Select label="Season" value={f.season} options={["All", ...(seasons?.map((s) => s.season) ?? [])]} onChange={f.setSeason} />
       {venue && <Select label="Venue" value={f.venue} options={["All", "Home", "Away"]} onChange={(v) => f.setVenue(v as Venue)} />}
     </div>
