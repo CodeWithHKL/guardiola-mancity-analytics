@@ -25,11 +25,11 @@ export function TrophyMarquee() {
       <div className="pointer-events-none absolute left-0 top-0 z-10 h-full w-16 bg-gradient-to-r from-background to-transparent md:w-32" />
       <div className="marquee-inner flex w-max">
         {items.map((t, i) => (
-          <div key={i} className="mx-3 flex h-80 w-48 shrink-0 flex-col items-center justify-between border border-line bg-[#0a1724] px-3 py-4 text-center" aria-hidden={i >= TROPHIES.length}>
+          <div key={i} className="mx-3 flex h-80 w-48 shrink-0 flex-col items-center justify-between border border-line bg-[#0a1724] text-white px-3 py-4 text-center" aria-hidden={i >= TROPHIES.length}>
             <span className="font-display text-5xl font-semibold leading-none tabular-nums text-white">{t.count}</span>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={`/images/trophies/${t.image}.webp`} alt={t.name} draggable={false} className="min-h-0 flex-1 object-contain py-3" />
-            <span className="text-sm text-muted">{t.name}</span>
+            <span className="text-sm text-[#b3c8ec]">{t.name}</span>
           </div>
         ))}
       </div>

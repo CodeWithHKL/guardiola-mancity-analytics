@@ -16,7 +16,7 @@ export function StatTile({ label, value, sub }: { label: string; value: ReactNod
   return (
     <div className="border-t-2 border-sky/70 pt-2">
       <div className="text-xs uppercase tracking-wider text-muted">{label}</div>
-      <div className="font-display text-4xl font-semibold leading-tight tabular-nums text-white">{value}</div>
+      <div className="font-display text-4xl font-semibold leading-tight tabular-nums text-foreground">{value}</div>
       {sub && <div className="text-sm text-muted">{sub}</div>}
     </div>
   );
@@ -94,7 +94,7 @@ export function DataTable<T>({ rows, cols, initialSort, rowKey, initialDir = -1,
         </thead>
         <tbody>
           {sorted.map((r) => (
-            <tr key={rowKey(r)} className="border-b border-line/50 hover:bg-white/5">
+            <tr key={rowKey(r)} className="border-b border-line/50 hover:bg-foreground/5">
               {cols.map((c) => (
                 <td key={c.key} className={`px-2 py-1.5 tabular-nums ${c.align === "left" ? "text-left" : "text-right"}`}>
                   {c.render ? c.render(r) : c.value(r)}
